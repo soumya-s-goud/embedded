@@ -1,26 +1,47 @@
-name: Build • Run • Artifact (Linux, ultra-minimal)
+name: STM32F446RE • Build (ELF/BIN) • Validate • Artifacts
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 jobs:
-  hello:
-    runs-on: ubuntu-latest     # Linux runner provided by GitHub
+  build-stm32:
+    runs-on: ubuntu-latest   # <-- GitHub public Ubuntu runner
 
     steps:
-      - name: Get the code
+      - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Build (compile hello.c -> hello)
-        run: gcc -O2 hello.c -o hello
+      # --- Build real STM32 firmware (cross-compile for Cortex-M4F) ---
+      - name: Install GNU Arm toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi
 
-      - name: Run (show output in logs)
-        run: ./hello
+      - name: Compile & link firmware (ELF, BIN, MAP)
+        run: |
+          set -e
+          # Build a tiny bare-metal firmware at FLASH base (0x08000000)
+          arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=softfp \
+            -Os -ffreestanding -nostdlib -Wl,-e,_start -Wl,-Ttext=0x08000000 \
+            firmware_min.c -o firmware.elf
 
-      - name: Artifact (attach the built program for download)
+          arm-none-eabi-objcopy -O binary firmware.elf firmware.bin
+          arm-none-eabi-size firmware.elf
+
+      # --- "Run" something so beginners see output in logs ---
+      - name: Run a tiny host check
+        run: |
+          gcc -O2 hello.c -o hello && ./hello
+          echo "First 16 ARM instructions from firmware:"
+          arm-none-eabi-objdump -d firmware.elf | head -n 40
+
+      # --- Upload ready-to-flash artifacts ---
+      - name: Upload artifacts (ELF/BIN/MAP)
         uses: actions/upload-artifact@v4
         with:
-          name: hello-linux
-          path: hello
+          name: stm32-firmware
+          path: |
+            firmware.elf
+            firmware.bin
