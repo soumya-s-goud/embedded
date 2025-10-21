@@ -1,0 +1,26 @@
+name: Build • Run • Artifact (Linux, ultra-minimal)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  hello:
+    runs-on: ubuntu-latest     # Linux runner provided by GitHub
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Build (compile hello.c -> hello)
+        run: gcc -O2 hello.c -o hello
+
+      - name: Run (show output in logs)
+        run: ./hello
+
+      - name: Artifact (attach the built program for download)
+        uses: actions/upload-artifact@v4
+        with:
+          name: hello-linux
+          path: hello
