@@ -1,2 +1,2 @@
 #include <stdio.h>
-int main(){ puts("Hello from GitHub CI! ✔ Build ✔ Run ✔ Artifact"); }
+int main(){ puts("Pipeline OK: built STM32 firmware + produced artifacts."); }
